@@ -32,6 +32,11 @@
       <version>${jbehave.site.version}</version>
       <type>zip</type>
     </dependency>
+    <dependency>
+      <groupId>org.seleniumhq.selenium</groupId>
+      <artifactId>selenium-java</artifactId>
+      <version>3.0.1</version>
+    </dependency>
   </dependencies>
 
   <build>
@@ -86,7 +91,8 @@
               <ignoreFailureInView>false</ignoreFailureInView>
               <threads>1</threads>
               <metaFilters>
-                <metaFilter></metaFilter>
+                <metaFilter>+mon</metaFilter>
+                <metaFilter>+monitor</metaFilter>
               </metaFilters>
             </configuration>
             <goals>
