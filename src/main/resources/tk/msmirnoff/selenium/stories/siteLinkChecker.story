@@ -6,12 +6,13 @@ Meta:  @monitor
 
 
 When I open site <url>
-When I find all links on the page
+When I find all links on the site with <depth>
+When Show statistic
 Then I shall be happy
 
 Examples:
-|url|status|
-|https://www.google.com.ua/|OFF|
+|url|depth|
+|https://google.com.ua|10|
 
 
 
