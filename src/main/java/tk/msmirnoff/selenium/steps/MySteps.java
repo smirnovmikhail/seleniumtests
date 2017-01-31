@@ -40,11 +40,12 @@ public class MySteps {
         }
         if (isExist) {
             System.out.println("LINK ALREADY EXIST");
-            htmlLink.print();
+            //  htmlLink.print();
+            System.out.println(htmlLink.getUrl() + " " + htmlLink.getDepth());
         } else {
-            if (htmlLink.getUrl().toLowerCase().startsWith("http")){
-            links.add(htmlLink);}else
-            {
+            if (htmlLink.getUrl().toLowerCase().startsWith("http")) {
+                links.add(htmlLink);
+            } else {
                 System.out.println("NON HTTP LINK");
                 htmlLink.print();
             }
@@ -66,36 +67,43 @@ public class MySteps {
         setVisited(url, true);
     }
 
-
-
     @When("I find all links on the site with $depth")
     public void findLinks(@Named("depth") int depth) {
-        try {
-            List<WebElement> links = driver.findElements(By.tagName("a"));
-            for (WebElement myElement : links) {
-                if (myElement.getText() != "") {
-                    addLink(new HtmlLink(myElement.getText(), myElement.getAttribute("href"), driver.getCurrentUrl(), depth, myElement.getLocation()));
-                }
-            }
 
-            System.out.println("Checked " + driver.getCurrentUrl());
-            if (depth > 0) {
-                for (HtmlLink pageLink : this.links) {
-                    if (!pageLink.isVisited()) {
-                        openUrl(pageLink.getUrl());
-                        findLinks(depth-1);
+        List<WebElement> links = driver.findElements(By.tagName("a"));
+        for (WebElement myElement : links) {
+            try {
+                if (myElement.getText() != "") {
+                    try {
+                        addLink(new HtmlLink(myElement.getText(), myElement.getAttribute("href"), driver.getCurrentUrl(), depth, myElement.getLocation()));
+                    } catch (Exception ex) {
+                        System.out.println("Can not create link " + myElement.getText() + " " + myElement.getAttribute("href"));
                     }
                 }
-            }
-        }
-            catch (org.openqa.selenium.StaleElementReferenceException ex){
+            } catch (org.openqa.selenium.StaleElementReferenceException ex) {
                 System.out.println("ERROR org.openqa.selenium.StaleElementReferenceException");
                 ex.printStackTrace();
             }
+        }
 
-       // } catch (Exception e) {
-      //      System.out.println("error " + e.getStackTrace().toString());
-     //   }
+        System.out.println("Checked " + driver.getCurrentUrl());
+        if (depth > 0) {
+            for (HtmlLink pageLink : this.links) {
+                try {
+                    if (!pageLink.isVisited()) {
+                        openUrl(pageLink.getUrl());
+                        findLinks(depth - 1);
+                    }
+                } catch (Exception ex) {
+                    System.out.println("Cannot parse " + pageLink.getUrl());
+                }
+            }
+        }
+
+
+        // } catch (Exception e) {
+        //      System.out.println("error " + e.getStackTrace().toString());
+        //   }
     }
 
     @Given("I am a pending step")

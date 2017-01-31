@@ -35,6 +35,10 @@ public class HtmlLink {
             this.location = new Point(0,0);
         }
 
+        this.depth=depth;
+        this.location=location;
+        visited=false;
+        valid=false;
     }
 
     public String getName() {
