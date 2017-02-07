@@ -1,16 +1,19 @@
 package tk.msmirnoff.selenium.steps;
 
+import org.apache.http.client.methods.CloseableHttpResponse;
+import org.apache.http.client.methods.HttpGet;
+import org.apache.http.impl.client.DefaultHttpClient;
 import org.jbehave.core.annotations.*;
 import org.openqa.selenium.*;
 import org.openqa.selenium.chrome.ChromeDriver;
 import tk.msmirnoff.selenium.HtmlLink;
 
+import java.io.IOException;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.concurrent.TimeUnit;
 
 public class MySteps {
-
 
     private WebDriver driver = null;
     private List<HtmlLink> links = null;
@@ -29,7 +32,6 @@ public class MySteps {
         System.out.println("afterScenario");
     }
 
-
     private void addLink(HtmlLink htmlLink) {
         boolean isExist = false;
         for (HtmlLink sitelink : links) {
@@ -39,7 +41,7 @@ public class MySteps {
             }
         }
         if (isExist) {
-            System.out.println("LINK ALREADY EXIST");
+            System.out.print("LINK ALREADY EXIST ");
             //  htmlLink.print();
             System.out.println(htmlLink.getUrl() + " " + htmlLink.getDepth());
         } else {
@@ -64,46 +66,39 @@ public class MySteps {
     @When("I open site $url")
     public void openUrl(@Named("url") String url) {
         driver.get(url);
-        setVisited(url, true);
+        findBrokenImages();
     }
 
     @When("I find all links on the site with $depth")
     public void findLinks(@Named("depth") int depth) {
 
-        List<WebElement> links = driver.findElements(By.tagName("a"));
-        for (WebElement myElement : links) {
-            try {
-                if (myElement.getText() != "") {
-                    try {
-                        addLink(new HtmlLink(myElement.getText(), myElement.getAttribute("href"), driver.getCurrentUrl(), depth, myElement.getLocation()));
-                    } catch (Exception ex) {
-                        System.out.println("Can not create link " + myElement.getText() + " " + myElement.getAttribute("href"));
+        addLink(new HtmlLink("START PAGE", driver.getCurrentUrl(), driver.getCurrentUrl(), depth, new Point(0, 0)));
+
+        while (true) {
+            //TODO: add max iteration
+            List<HtmlLink> allunvisitedLinks = getAllUnvisitedLinks();
+            System.out.println("To check " + allunvisitedLinks.size());
+
+            for (HtmlLink myLink : allunvisitedLinks) {
+                List<HtmlLink> allLinksFromPage = getAllLinksFromPage(myLink.getUrl());
+                for (HtmlLink link : allLinksFromPage) {
+                    if (myLink.getDepth() > 0) {
+                        link.setDepth(myLink.getDepth() - 1);
+                        addLink(link);
                     }
                 }
-            } catch (org.openqa.selenium.StaleElementReferenceException ex) {
-                System.out.println("ERROR org.openqa.selenium.StaleElementReferenceException");
-                ex.printStackTrace();
+                System.out.println("Checked " + driver.getCurrentUrl());
             }
-        }
+            setVisited(driver.getCurrentUrl(), true);
 
-        System.out.println("Checked " + driver.getCurrentUrl());
-        if (depth > 0) {
-            for (HtmlLink pageLink : this.links) {
-                try {
-                    if (!pageLink.isVisited()) {
-                        openUrl(pageLink.getUrl());
-                        findLinks(depth - 1);
-                    }
-                } catch (Exception ex) {
-                    System.out.println("Cannot parse " + pageLink.getUrl());
-                }
+            if (allunvisitedLinks.size() == 0) {
+                System.out.println("EXIT_Depth: " + depth);
+                break;
             }
+            depth--;
+            System.out.println("Depth: " + depth);
+
         }
-
-
-        // } catch (Exception e) {
-        //      System.out.println("error " + e.getStackTrace().toString());
-        //   }
     }
 
     @Given("I am a pending step")
@@ -121,5 +116,70 @@ public class MySteps {
         //TODO:
         // assertEquals(0, 0);
         System.out.println("I'm happy");
+    }
+
+    //TODO: implement
+    public void findBrokenImages() {
+        List<WebElement> imagesList = driver.findElements(By.tagName("img"));
+        for (
+                WebElement image : imagesList)
+
+        {
+            CloseableHttpResponse response = null;
+            try {
+                response = new DefaultHttpClient().execute(new HttpGet(image.getAttribute("src")));
+
+
+                if (response != null) {
+                    if (response.getStatusLine().getStatusCode() != 200) { // Do whatever you want with broken images
+                        System.out.println("ERROR: Broken image on page " + driver.getCurrentUrl());
+                    }
+                }
+
+            } catch (IOException e) {
+                e.printStackTrace();
+            }
+        }
+    }
+
+    @When("I sleep $sec sec")
+    public void sleep(@Named("sec") int sec) {
+        try {
+            Thread.sleep(sec * 1000);
+        } catch (InterruptedException e) {
+            System.out.println("Exception: Failed to sleep " + sec + "sec");
+        }
+    }
+
+    public List<HtmlLink> getAllLinksFromPage(String url) {
+
+        System.out.println("Processing " + url);
+        openUrl(url);
+        List<HtmlLink> list = new ArrayList<HtmlLink>();
+
+        List<WebElement> links = driver.findElements(By.tagName("a"));
+        for (WebElement myElement : links) {
+            try {
+                if (myElement.getText() != "") {
+                    list.add(new HtmlLink(myElement.getText(), myElement.getAttribute("href"), driver.getCurrentUrl(), 0, myElement.getLocation()));
+                }
+            } catch (org.openqa.selenium.StaleElementReferenceException ex) {
+                System.out.println("ERROR org.openqa.selenium.StaleElementReferenceException");
+                ex.printStackTrace();
+            }
+        }
+        return list;
+    }
+
+    private List<HtmlLink> getAllUnvisitedLinks() {
+
+        List<HtmlLink> allUnvisitedLinks = new ArrayList();
+        for (HtmlLink myLink : links) {
+
+            if (!myLink.isVisited()) {
+                allUnvisitedLinks.add(myLink);
+            }
+        }
+        return allUnvisitedLinks;
     }
 }
